@@ -1,12 +1,26 @@
-﻿// Machine Learning.cpp : Defines the entry point for the application.
-//
+﻿#include "pch.h"
 
-#include "Number_recognizer.h"
+#include "phm_app.h"
+
+#include <iostream>
+#include <cstdlib>
+#include <stdexcept>
+
 
 
 int main()
 {
-	std::cout << "Hello CMake." << std::endl;
+	phm::Application app{ };
 
-	return 0;
+	try
+	{
+		app.run();
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what();
+		return EXIT_FAILURE;
+	}
+
+	return EXIT_SUCCESS;
 }
