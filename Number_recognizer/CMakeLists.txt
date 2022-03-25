@@ -37,7 +37,9 @@ set(
     "image_data.h" 
     "image_data.cpp" 
     "phm_utils.cpp"
- "time.cpp" "time.h")
+    "time.cpp" 
+    "time.h" 
+)
 
 # Add source to this project's executable.
 add_executable (${PROJECT_NAME} ${SOURCES} )
@@ -87,16 +89,19 @@ target_include_directories(${PROJECT_NAME}
 	PUBLIC ../vendor/glfw/include/
     PUBLIC ../vendor/glm/
     PUBLIC ../vendor/tinyobjloader/
+	PUBLIC ../Feed_forward_NEAT/
 )
 
 target_link_directories(${PROJECT_NAME}
 	PRIVATE ../vendor/glfw/src
     PRIVATE $ENV{VULKAN_SDK}/Lib
+	PRIVATE ../Feed_forward_NEAT
 )
  
 target_link_libraries(${PROJECT_NAME}
 	glfw
     vulkan-1
+	ff_neat
 )
 
 # Adding debug PDB

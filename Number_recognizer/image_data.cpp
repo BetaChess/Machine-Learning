@@ -6,6 +6,10 @@
 #include <stdexcept>
 #include <sstream>
 
+/// <summary>
+/// Function to read a big endian integer from a file stream.
+/// </summary>
+/// <returns>The integer with correct endianness corresponding to the system. </returns>
 uint32_t readInteger(std::ifstream& fstream)
 {
 	uint8_t buffer[4] = { 0 };

@@ -6,6 +6,8 @@
 #include "simple_render_system.h"
 #include "time.h"
 
+#include "NEAT.h"
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -19,6 +21,8 @@ namespace phm
 {
 	Application::Application()
 	{
+		Genome testGenome(2, 1);
+		
 		current_image_ = testdata_.getImage(curr_image_index_);
 		loadObjects();
 	}

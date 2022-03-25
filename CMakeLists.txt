@@ -20,6 +20,7 @@ endif()
 
 
 # Include sub-projects.
+add_subdirectory ("Feed_forward_NEAT")
 add_subdirectory ("Number_recognizer")
 add_subdirectory ("vendor/glfw")
 add_subdirectory ("vendor/glm")
