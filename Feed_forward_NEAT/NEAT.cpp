@@ -52,67 +52,46 @@ Genome::Genome()
 {
 }
 
-Genome::Genome(size_t inputCount, size_t outputCount)
+Genome::Genome(const size_t inputCount, const size_t outputCount)
+	: inputNodeCount_(inputCount), outputNodeCount_(outputCount)
 {
 	for (size_t i = 0; i < inputCount; i++)
 	{
 		nodeGenes_.emplace_back(Genome::NodeGene::NodeType::INPUT);
-		inputNodes_.push_back(&nodeGenes_[nodeGenes_.size() - 1]);
 	}
 	nodeGenes_.emplace_back(Genome::NodeGene::NodeType::INPUT);
-	inputNodes_.push_back(&nodeGenes_[nodeGenes_.size() - 1]);
-	
 	
 	for (size_t i = 0; i < outputCount; i++)
 	{
 		nodeGenes_.emplace_back(Genome::NodeGene::NodeType::OUTPUT);
-		outputNodes_.push_back(&nodeGenes_[nodeGenes_.size() - 1]);
 	}
 }
 
 Genome::Genome(const Genome& genomeToCopy)
+	: inputNodeCount_(genomeToCopy.inputNodeCount_), outputNodeCount_(genomeToCopy.outputNodeCount_)
 {
 	// Copy the node genes
 	for (const auto& node : genomeToCopy.nodeGenes_)
-	{
 		nodeGenes_.emplace_back(node);
-	}
 	
-	for (auto& node : nodeGenes_)
-	{
-		if (node.type_ == NodeGene::NodeType::INPUT)
-			inputNodes_.push_back(&node);
-		else if (node.type_ == NodeGene::NodeType::OUTPUT)
-			outputNodes_.push_back(&node);
-	}
-
 	// Copy the connection genes
 	for (const auto&[innovationNum, connection] : genomeToCopy.connectionGenes_)
-	{
 		addConnectionGene_assumeSafe(connection);
-	}
 }
 
 Genome::Genome(const Genome& parent1, const Genome& parent2)
+	: inputNodeCount_(parent1.inputNodeCount_), outputNodeCount_(parent1.outputNodeCount_)
 {
+	assert(parent1.inputNodeCount_ == parent2.inputNodeCount_ && "Input counts do not match between parents!");
+	assert(parent1.outputNodeCount_ == parent2.outputNodeCount_ && "Output counts do not match between parents!");
+	
 	// Create the random number generator
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	
 	// Add all nodes from parent1
 	for (const auto& node : parent1.nodeGenes_)
-	{
-		nodeGenes_.push_back(node);
-		
-		if (node.type_ == NodeGene::NodeType::INPUT)
-		{
-			inputNodes_.push_back(&nodeGenes_[nodeGenes_.size() - 1]);
-		}
-		else if (node.type_ == NodeGene::NodeType::OUTPUT)
-		{
-			outputNodes_.push_back(&nodeGenes_[nodeGenes_.size() - 1]);
-		}
-	}
+		nodeGenes_.emplace_back(node);
 	
 	// Go through each connection gene in parent1 and see if it also exists in parent2.
 	// If it does, add it to the genome.
@@ -143,12 +122,14 @@ Genome::Genome(const Genome& parent1, const Genome& parent2)
 			connectionGenes_[innovationNum] = connection;
 		}
 	}
+	
+	reconnectIncommingPointers();
 }
 
 /// <summary>
 /// Mutates the network according to values found in: http://nn.cs.utexas.edu/downloads/papers/stanley.ec02.pdf
 /// </summary>
-void Genome::mutate(float mutateWeightChance, float mutateAddNodeChance, float mutateAddConnectionChance)
+Genome& Genome::mutate(float mutateWeightChance, float mutateAddNodeChance, float mutateAddConnectionChance)
 {
 	// Create the random number generator
 	std::random_device rd;
@@ -171,13 +152,17 @@ void Genome::mutate(float mutateWeightChance, float mutateAddNodeChance, float m
 	{
 		addConnectionMutation();
 	}
+
+	reconnectIncommingPointers();
+
+	return *this;
 }
 
-void Genome::addConnectionMutation()
+Genome& Genome::addConnectionMutation()
 {
 	assert(nodeGenes_.size() > 0 && "There are no node genes to add connections to!");
-	assert(inputNodes_.size() > 0 && "There are no input nodes!");
-	assert(outputNodes_.size() > 0 && "There are no output nodes!");
+	assert(inputNodeCount_ > 0 && "There are no input nodes!");
+	assert(outputNodeCount_ > 0 && "There are no output nodes!");
 	
 	// Create the randomizer helpers
 	std::random_device rd;
@@ -227,20 +212,22 @@ void Genome::addConnectionMutation()
 		if (connectionGenes_.find((*existsIt).second) != connectionGenes_.end())
 		{
 			// Connection exists in this genome.
-			return;
+			return *this;
 		}
 		else
 		{
 			// Connection exists in the innovation space, but not in this genome.
 			// Add the connection to this genome.
 			connectionGenes_.emplace((*existsIt).second, ConnectionGene(node1, node2, randomFloatGen(gen), true, (*existsIt).second));
-			return;
+			reconnectIncommingPointers();
+			return *this;
 		}
-			
 	}
+	
+	return *this;
 }
 
-void Genome::addNodeMutation()
+Genome& Genome::addNodeMutation()
 {
 	assert(connectionGenes_.size() != 0 && "There are no connection genes to split!");
 	
@@ -268,37 +255,43 @@ void Genome::addNodeMutation()
 	
 	addConnectionGene_assumeSafe(node1, nodeGenes_.size() - 1, 1.0f);
 	addConnectionGene_assumeSafe(nodeGenes_.size() - 1, node2, connection.weight_);
+	
+	return *this;
 }
 
 /// <summary>
 /// Mutates every connection in the genome.
 /// </summary>
-void Genome::mutateConnectionGenes()
+Genome& Genome::mutateConnectionGenes()
 {
 	// Create the randomizer helpers
 	std::random_device rd;
 	std::mt19937 gen(rd());
 	
-	std::uniform_real_distribution<float> randomFloatGen{ -2.0f, 2.0f };
-	
+
 	// Mutate all connection genes
 	for (auto& connection : connectionGenes_)
 	{
 		// 10% chance to reset the weight
-		if (randomFloatGen(gen) < 0.1f)
+		if (std::uniform_real_distribution<float>(0.0f, 1.0f)(gen) < 0.1f)
 		{
-			connection.second.weight_ = randomFloatGen(gen);
+			connection.second.weight_ = std::uniform_real_distribution<float>(-2.0f, 2.0f)(gen);
 		}
 		else // 90% change to perturb the weight
 		{
-			connection.second.weight_ *= randomFloatGen(gen);
+			connection.second.weight_ += std::uniform_real_distribution<float>(-1.0f, 1.0f)(gen);
 		}
 	}
+	
+	return *this;
 }
 
-void Genome::addHiddenNode()
+Genome& Genome::addHiddenNode()
 {
 	nodeGenes_.push_back(NodeGene::NodeType::HIDDEN);
+	reconnectIncommingPointers();
+	
+	return *this;
 }
 
 /// <summary>
@@ -349,13 +342,15 @@ void Genome::addConnectionGene_assumeSafe(uint64_t inNode, uint64_t outNode, flo
 		connectionInnovationNumber = ConnectionGene::currentInnovationNumber_s++;
 	
 	connectionGenes_[connectionInnovationNumber] = { inNode, outNode, weight, expressed, connectionInnovationNumber };
-	nodeGenes_[outNode].incomming_.push_back(&connectionGenes_[connectionInnovationNumber]);
+	reconnectIncommingPointers();
+	//nodeGenes_[outNode].incomming_.push_back(&connectionGenes_[connectionInnovationNumber]);
 }
 
 void Genome::addConnectionGene_assumeSafe(const ConnectionGene& gene)
 {
 	connectionGenes_[gene.innovationNumber_] = { gene.inNode_, gene.outNode_, gene.weight_, gene.expressed_, gene.innovationNumber_ };
-	nodeGenes_[gene.outNode_].incomming_.push_back(&connectionGenes_[gene.innovationNumber_]);
+	reconnectIncommingPointers();
+	//nodeGenes_[gene.outNode_].incomming_.push_back(&connectionGenes_[gene.innovationNumber_]);
 }
 
 /// <summary>
@@ -437,24 +432,29 @@ void Genome::resetCache()
 
 void Genome::setInputValues(const std::vector<float>& values)
 {
-	// Remember, one input node is the bias (the last one)
-	assert(values.size() == inputNodes_.size() - 1 && "Number of input nodes doesn't match number of values given!");
+	if (values.size() != inputNodeCount_)
+		__debugbreak();
+	
+	//assert(values.size() != inputNodeCount_ && "Number of input nodes doesn't match number of values given!");
 	
 	for (size_t i = 0; i < values.size(); i++)
 	{
-		inputNodes_[i]->value_ = values[i];
-		inputNodes_[i]->cached_ = true;
+		assert(nodeGenes_[i].type_ == NodeGene::NodeType::INPUT && "Node is not an input node!");
+		
+		nodeGenes_[i].value_ = values[i];
+		nodeGenes_[i].cached_ = true;
 	}
 	
 	// Set the bias node's value
-	inputNodes_[inputNodes_.size() - 1]->value_ = 1.0f;
-	inputNodes_[inputNodes_.size() - 1]->cached_ = true;
+	nodeGenes_[inputNodeCount_].value_ = 1.0f;
+	nodeGenes_[inputNodeCount_].cached_ = true;
 }
 
 void Genome::evaluateOutputNodes()
 {
-	for (auto& node : outputNodes_)
-		node->evaluate(nodeGenes_);
+	auto limit = inputNodeCount_ + 1ULL + outputNodeCount_; // +1 because of the bias input node.
+	for (size_t i = inputNodeCount_ + 1ULL; i < limit; i++)
+		nodeGenes_[i].evaluate(nodeGenes_);
 }
 
 /// <summary>
@@ -462,10 +462,13 @@ void Genome::evaluateOutputNodes()
 /// </summary>
 float Genome::getOutputValue(size_t outputIndex)
 {
-	assert(outputIndex < outputNodes_.size() && "Tried retrieving output that doesn't exist!");
-	assert(outputNodes_[outputIndex]->cached_ && "Tried retrieving output that hasn't been calculated yet!");
+	auto index = inputNodeCount_ + 1ULL + outputIndex;
 	
-	return outputNodes_[outputIndex]->value_;
+	assert(outputIndex < outputNodeCount_ && "Tried retrieving output that doesn't exist!");
+	assert(nodeGenes_[index].type_ == NodeGene::NodeType::OUTPUT && "Node is not an output node!");
+	assert(nodeGenes_[index].cached_ && "Tried retrieving output that hasn't been calculated yet!");
+	
+	return nodeGenes_[index].value_;
 }
 
 /// <summary>
@@ -474,17 +477,28 @@ float Genome::getOutputValue(size_t outputIndex)
 std::vector<float> Genome::getOutputValues()
 {
 	std::vector<float> returnValues;
-	returnValues.reserve(outputNodes_.size());
+	returnValues.reserve(outputNodeCount_);
 	
-	for (auto& node : outputNodes_)
+	auto limit = inputNodeCount_ + 1ULL + outputNodeCount_; // +1 because of the bias input node.
+	for (size_t i = inputNodeCount_ + 1ULL; i < limit; i++)
 	{
-		assert(node->cached_ && "Tried retrieving output that hasn't been calculated yet!");
+		assert(nodeGenes_[i].cached_ && "Tried retrieving output that hasn't been calculated yet!");
 		
-		returnValues.push_back(node->value_);
+		returnValues.push_back(nodeGenes_[i].value_);
 	}
 	
 	
 	return returnValues;
 }
 
+void Genome::reconnectIncommingPointers()
+{
+	for (auto& nodeGene : nodeGenes_)
+		nodeGene.incomming_.clear();
+	
+	for (auto&[innovationNumber, connectionGene] : connectionGenes_)
+	{
+		nodeGenes_[connectionGene.outNode_].incomming_.push_back(&connectionGene);
+	}
+}
 

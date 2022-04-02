@@ -95,12 +95,12 @@ public:
 	Genome(const Genome& parent1, const Genome& parent2);
 	
 	// Public methods
-	void mutate(float mutateWeightChance = 0.8f, float mutateAddNodeChance = 0.03f, float mutateAddConnectionChance = 0.05f);
-	void addConnectionMutation();
-	void addNodeMutation();
-	void mutateConnectionGenes();
+	Genome& mutate(float mutateWeightChance = 0.8f, float mutateAddNodeChance = 0.03f, float mutateAddConnectionChance = 0.05f);
+	Genome& addConnectionMutation();
+	Genome& addNodeMutation();
+	Genome& mutateConnectionGenes();
 	
-	void addHiddenNode();
+	Genome& addHiddenNode();
 	bool addConnectionGene(uint64_t inNode, uint64_t outNode, float weight, bool expressed = true);
 	
 	[[nodiscard]] float calculateCompatibilityDistance(const Genome& other, const float excessConst, const float disjointConst, const float weightDiffConst) const;
@@ -117,12 +117,16 @@ public:
 	[[nodiscard]] inline size_t numberOfNodes() const { return nodeGenes_.size(); };
 	[[nodiscard]] inline size_t numberOfConnections() const { return connectionGenes_.size(); };
 	
+	void reconnectIncommingPointers();
+	
 private:
 	static std::unordered_map<std::pair<uint64_t, uint64_t>, uint64_t, hashPair> existingInnovations_s;
 	
 	std::vector<NodeGene> nodeGenes_{};
-	std::vector<NodeGene*> inputNodes_{};
-	std::vector<NodeGene*> outputNodes_{};
+	size_t inputNodeCount_ = 0;
+	size_t outputNodeCount_ = 0;
+	//std::vector<NodeGene*> inputNodes_{};
+	//std::vector<NodeGene*> outputNodes_{};
 	
 	std::unordered_map<uint64_t, ConnectionGene> connectionGenes_{};
 	

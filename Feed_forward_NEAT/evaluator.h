@@ -4,21 +4,15 @@
 #include "NEAT.h"
 
 #include <unordered_map>
+#include <memory>
 
 class Evaluator
 {
 public:
-	struct GenomeFitnessPair
+	struct FitnessCorrectpercentagePair
 	{
-		Genome* genome; // Non-owning pointer to the genome in question
-		float fitness;	// Fitness of the genome
-		
-		inline bool operator<(const GenomeFitnessPair& rhs) const { return fitness < rhs.fitness; };
-		inline bool operator>(const GenomeFitnessPair& rhs) const { return fitness > rhs.fitness; };
-		
-		inline operator Genome&() { return *genome; };
-		inline operator Genome() const { return *genome; };
-		inline operator float() const { return fitness; };
+		float fitness;
+		float correctpercentage;
 	};
 	
 	struct Species
@@ -69,9 +63,11 @@ private:
 protected:
 	std::vector<Genome> genomes_{};
 	std::unordered_map<Genome*, float> fitnessMap_{};
+
+	void calculateFitnessMap();
 	
-	[[nodiscard]] virtual GenomeFitnessPair evaluateGenomeTraining(Genome& genome) = 0;
-	[[nodiscard]] virtual GenomeFitnessPair evaluateGenomeTest(Genome& genome) = 0;
+	[[nodiscard]] virtual float evaluateGenomeTraining(Genome& genome) = 0;
+	[[nodiscard]] virtual FitnessCorrectpercentagePair evaluateGenomeTest(Genome& genome) = 0;
 };
 
 
