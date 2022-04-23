@@ -1,7 +1,18 @@
 #include "benchmarker.h"
 
 #include <iostream>
+#include <fstream>
+#include <cassert>
 
+
+Benchmarker::BenchmarkStats& Benchmarker::BenchmarkStats::operator+=(const Benchmarker::BenchmarkStats& other)
+{
+	count += other.count;
+	totalDuration += other.totalDuration;
+	minDuration = std::min(minDuration, other.minDuration);
+	maxDuration = std::max(maxDuration, other.maxDuration);
+	return *this;
+}
 
 std::unordered_map<std::string, Benchmarker::BenchmarkStats> Benchmarker::benchmarkStats_s{};
 
@@ -41,6 +52,18 @@ void Benchmarker::stop()
 	stopped_ = true;
 }
 
+Benchmarker::BenchmarkStats Benchmarker::stop_getStats()
+{
+	auto stopTime = std::chrono::steady_clock::now();
+	stopped_ = true;
+
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stopTime - startTime_);
+	return { duration };
+
+	
+}
+
+
 void Benchmarker::printStats()
 {
 	std::cout << "BENCHMARKER STATS:\n";
@@ -55,3 +78,53 @@ void Benchmarker::printStats()
 		std::cout << "Avg. exec. time:    \033[35m" << stats.getAverageDuration().count() << "\033[0m\n";
 	}
 }
+
+void Benchmarker::writeStatsToFile(const std::string& fileName)
+{
+	std::ofstream outFile{ fileName };
+	if (!outFile.is_open())
+	{
+		std::cerr << "Failed to open file (in benchmarker.cpp): " << fileName << '\n';
+		return;
+	}
+	
+	for (auto& [name, stats] : benchmarkStats_s)
+	{
+		outFile 
+			<< name << ','
+			<< stats.count << ','
+			<< stats.totalDuration.count() << ','
+			<< stats.minDuration.count() << ','
+			<< stats.maxDuration.count() << ','
+			<< stats.getAverageDuration().count() << '\n';
+	}
+
+	return;
+}
+
+void Benchmarker::runNormalTestWriteToFile(size_t sampleCount, std::string fileName, std::function<void()> functionToBenchmark)
+{
+	assert(sampleCount > 0 && "Sample count must be greater than 0!");
+	assert(fileName != "" && "File name cannot be an empty string!");
+	assert(functionToBenchmark != nullptr && "Function to benchmark must not be null!");
+
+	std::ofstream outFile{ fileName };
+	if (!outFile.is_open())
+	{
+		std::cerr << "Failed to open file (in benchmarker.cpp): " << fileName << '\n';
+		return;
+	}	
+
+	auto bench = Benchmarker{ "NormalTest" };
+	functionToBenchmark();
+	auto stats = bench.stop_getStats();
+	outFile << stats.totalDuration.count();
+	for (size_t i = 1; i < sampleCount; i++)
+	{
+		auto bench = Benchmarker{ "NormalTest" };
+		functionToBenchmark();
+		auto stats = bench.stop_getStats();
+		outFile << ',' << stats.totalDuration.count();
+	}
+}
+

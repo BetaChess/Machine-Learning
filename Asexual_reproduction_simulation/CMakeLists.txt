@@ -3,35 +3,15 @@
 #
 cmake_minimum_required (VERSION 3.8)
 
-project(ff_neat)
-
-
+project(asexual_reproduction_simulation)
 
 set(
     SOURCES
-    "NEAT.cpp" 
-    "NEAT.h"
-    "evaluator.h" 
-    "evaluator.cpp"
-    "calculator.h" 
-    "calculator.cpp"
+    "main.cpp"
 )
 
 # Add source to this project's executable.
-add_library(${PROJECT_NAME} STATIC ${SOURCES})
-
-target_include_directories(${PROJECT_NAME} 
-    PUBLIC ../Benchmarker/
-)
-
-target_link_directories(${PROJECT_NAME}
-	PRIVATE ../Benchmarker
-)
- 
-target_link_libraries(${PROJECT_NAME}
-	benchmarker
-)
-
+add_executable (${PROJECT_NAME} ${SOURCES} )
 
 set_target_properties(${PROJECT_NAME} 
     PROPERTIES
@@ -40,14 +20,23 @@ set_target_properties(${PROJECT_NAME}
         CXX_EXTENSIONS NO
 )
 
-message($<TARGET_FILE_DIR:${PROJECT_NAME}>)
+target_include_directories(${PROJECT_NAME} 
+	PUBLIC ../Feed_forward_NEAT/
+    PUBLIC ../Benchmarker/
+)
+
+target_link_directories(${PROJECT_NAME}
+	PRIVATE ../Feed_forward_NEAT
+	PRIVATE ../Benchmarker
+)
+ 
+target_link_libraries(${PROJECT_NAME}
+	ff_neat
+	benchmarker
+)
 
 # Adding debug PDB
 set_property(
     TARGET ${PROJECT_NAME}
     APPEND PROPERTY
         CMAKE_COMPILE_PDB_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:${PROJECT_NAME}>)
-
-
-add_subdirectory("unit_tests")
-add_subdirectory("benchmarks")
