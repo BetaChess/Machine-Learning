@@ -8,8 +8,9 @@
 int main()
 {
 	EvaluatorXor evaluator{ 150 };
+
 	
-	for (size_t i = 0; i < 1000; i++)
+	for (size_t i = 0; i < 100; i++)
 	{
 		evaluator.evaluate_training();
 		

@@ -43,6 +43,26 @@ EvaluatorXor::EvaluatorXor(
 	bench.stop();
 }
 
+EvaluatorXor::EvaluatorXor(std::vector<Genome>&& startingPopulation)
+	: Evaluator(startingPopulation.size())
+{
+	genomes_ = std::move(startingPopulation);
+}
+
+float EvaluatorXor::getBestFitness()
+{
+	float best = 0.0f;
+
+	for (auto& genome : genomes_)
+	{
+		float fitness = evaluateGenomeTraining(genome);
+		if (fitness > best)
+			best = fitness;
+	}
+
+	return best;
+}
+
 std::array<EvaluatorXor::outputInfo, 5> EvaluatorXor::getTop5Info()
 {
 	std::array<outputInfo, 5> top5{};

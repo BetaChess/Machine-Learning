@@ -19,7 +19,7 @@ namespace neat
 	{
 	}
 
-	inline void Genome::NodeGene::evaluate(std::vector<NodeGene>& nodes)
+	void Genome::NodeGene::evaluate(std::vector<NodeGene>& nodes)
 	{
 		value_ = 0;
 		for (auto conn : incomming_)

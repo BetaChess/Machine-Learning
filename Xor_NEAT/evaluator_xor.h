@@ -19,7 +19,10 @@ public:
 	
 public:
 	explicit EvaluatorXor(size_t populationSize, const float compatibilityDistanceCutoff = 3.0f, const float excessConst = 1.0f, const float disjointConst = 1.0f, const float weightDiffConst = 0.4f);	
-	
+	EvaluatorXor(std::vector<Genome>&& startingPopulation);
+
+	[[nodiscard]] float getBestFitness();
+
 	std::array<outputInfo, 5> getTop5Info();
 	
 private:

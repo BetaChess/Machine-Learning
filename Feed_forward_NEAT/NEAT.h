@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <unordered_map>
+#include <cmath>
+#include <cstdint>
 
 struct hashPair
 {
@@ -41,7 +43,7 @@ namespace neat
 			// public methods
 			inline NodeType type() const { return type_; };
 
-			inline void evaluate(std::vector<NodeGene>& nodes);
+			void evaluate(std::vector<NodeGene>& nodes);
 			[[nodiscard]] inline float getValue(std::vector<NodeGene>& nodes) { if (cached_) return value_; else evaluate(nodes); return value_; }
 
 			inline void resetCache() { cached_ = false; };

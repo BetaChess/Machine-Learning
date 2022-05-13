@@ -26,7 +26,7 @@
 #include <sched.h>  // sched_setaffinity
 #endif
 
-int main()
+int main(int argc, char** argv)
 {
 #ifdef _WIN32 
 	// Set thread affinity and priority for platform windows
